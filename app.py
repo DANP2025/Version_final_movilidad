@@ -25,7 +25,6 @@ st.title("Resultados test de Movilidad")
 # ==============================
 # Ruta del archivo Excel
 # ==============================
-# Detecta automáticamente si está en local o en Streamlit Cloud
 local_path = r"C:\Users\Daniel\Desktop\score_tscore\PRUEBAS MOVILIDAD.xlsx"
 repo_path = "PRUEBAS MOVILIDAD.xlsx"
 
@@ -93,18 +92,38 @@ umbral_cols = {
 cols_emoji = [col for col in umbral_cols.keys() if col in df.columns]
 
 # ==============================
-# Función para asignar emojis
+# Función para asignar emojis visibles
 # ==============================
-def asignar_emoji_html(valor, umbral):
+def asignar_emoji(valor, umbral):
     if pd.isna(valor):
         return ""
     try:
         if float(valor) >= umbral:
-            return "<div style='color:green; font-size:32px; text-align:center;'>👍</div>"
+            return "🟢👍"
         else:
-            return "<div style='color:red; font-size:32px; text-align:center;'>👎</div>"
+            return "🔴👎"
     except:
         return ""
 
-# ====
+# ==============================
+# Crear DataFrame con emojis
+# ==============================
+df_emojis = df.copy()
+for col in cols_emoji:
+    df_emojis[col] = df_emojis[col].apply(lambda x: asignar_emoji(x, umbral_cols[col]))
 
+# ==============================
+# Organizar columnas
+# ==============================
+otras_cols = [col for col in df_emojis.columns if col not in id_cols]
+df_emojis = df_emojis[id_cols + otras_cols]
+
+# ==============================
+# Mostrar número de registros
+# ==============================
+st.markdown(f"**Número de registros mostrados:** {df_emojis.shape[0]}")
+
+# ==============================
+# Mostrar tabla interactiva
+# ==============================
+st.dataframe(df_emojis, use_container_width=True)
