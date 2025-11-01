@@ -4,55 +4,48 @@ import pandas as pd
 import os
 
 # ==============================
-# Verificación de dependencias
-# ==============================
-try:
-    import openpyxl
-except ImportError:
-    st.error("El paquete 'openpyxl' no está instalado. Instálalo con 'pip install openpyxl' antes de ejecutar la app.")
-    st.stop()
-
-# ==============================
-# Configuración inicial
+# CONFIGURACIÓN INICIAL
 # ==============================
 st.set_page_config(
     page_title="Resultados test de Movilidad",
     layout="wide"
 )
 
-st.title("Resultados test de Movilidad")
+# Título principal
+st.title("📊 Resultados test de Movilidad")
+
+# Mostrar logo (debe estar en la misma carpeta que app.py)
+st.image("logo.png", width=180)  # Ajustá el tamaño si querés
 
 # ==============================
-# Ruta del archivo Excel
+# FUNCIONES
 # ==============================
-local_path = r"C:\Users\Daniel\Desktop\score_tscore\PRUEBAS MOVILIDAD.xlsx"
-repo_path = "PRUEBAS MOVILIDAD.xlsx"
 
-if os.path.exists(local_path):
-    EXCEL_FILE = local_path
-elif os.path.exists(repo_path):
-    EXCEL_FILE = repo_path
-else:
-    st.error("❌ No se encontró el archivo 'PRUEBAS MOVILIDAD.xlsx'.")
-    st.stop()
-
-# ==============================
-# Función para cargar datos
-# ==============================
 @st.cache_data
 def cargar_datos():
+    """
+    Carga los datos desde el archivo Excel.
+    Si el archivo no se encuentra o hay error, muestra un mensaje.
+    """
+    archivo_excel = "PRUEBAS MOVILIDAD.xlsx"
+    
+    if not os.path.exists(archivo_excel):
+        st.error(f"No se encontró el archivo Excel en la carpeta del proyecto: {archivo_excel}")
+        return pd.DataFrame()
+    
     try:
-        df = pd.read_excel(EXCEL_FILE)
+        df = pd.read_excel(archivo_excel)
         return df
     except Exception as e:
         st.error(f"Error al leer el archivo Excel: {e}")
         return pd.DataFrame()
 
+# ==============================
+# CARGAR DATOS
+# ==============================
 df = cargar_datos()
 
-# ==============================
-# Botón de refrescar
-# ==============================
+# Botón para refrescar los datos
 if st.button("🔄 Refrescar datos"):
     df = cargar_datos()
 
@@ -60,14 +53,7 @@ if df.empty:
     st.stop()
 
 # ==============================
-# Columnas prioritarias de identificación
-# ==============================
-id_cols_prioritarias = ["JUGADOR", "ID", "NOMBRE", "APELLIDO",
-                        "NOMBRE_COMPLETO", "NOMBRE Y APELLIDO", "NOMBRE_APELLIDO"]
-id_cols = [col for col in id_cols_prioritarias if col in df.columns]
-
-# ==============================
-# Filtro dinámico por CATEGORÍA
+# FILTRO POR CATEGORÍA
 # ==============================
 if "CATEGORÍA" in df.columns:
     categorias = ["Todas"] + sorted(df["CATEGORÍA"].dropna().astype(str).unique())
@@ -76,7 +62,7 @@ if "CATEGORÍA" in df.columns:
         df = df[df["CATEGORÍA"].astype(str) == seleccion_categoria]
 
 # ==============================
-# Columnas a transformar en emojis
+# COLUMNAS Y UMBRALES
 # ==============================
 umbral_cols = {
     "THOMAS PSOAS (D)": 10,
@@ -92,38 +78,38 @@ umbral_cols = {
 cols_emoji = [col for col in umbral_cols.keys() if col in df.columns]
 
 # ==============================
-# Función para asignar emojis visibles
+# FUNCIÓN PARA ASIGNAR EMOJIS
 # ==============================
-def asignar_emoji(valor, umbral):
+def asignar_emoji_html(valor, umbral):
     if pd.isna(valor):
         return ""
     try:
         if float(valor) >= umbral:
-            return "🟢👍"
+            return "<div style='color:green; font-size:32px; text-align:center;'>👍</div>"
         else:
-            return "🔴👎"
+            return "<div style='color:red; font-size:32px; text-align:center;'>👎</div>"
     except:
         return ""
 
 # ==============================
-# Crear DataFrame con emojis
+# CREAR DATAFRAME CON EMOJIS
 # ==============================
 df_emojis = df.copy()
 for col in cols_emoji:
-    df_emojis[col] = df_emojis[col].apply(lambda x: asignar_emoji(x, umbral_cols[col]))
+    df_emojis[col] = df_emojis[col].apply(lambda x: asignar_emoji_html(x, umbral_cols[col]))
 
 # ==============================
-# Organizar columnas
+# COLUMNAS DE IDENTIFICACIÓN
 # ==============================
+id_cols_prioritarias = ["JUGADOR", "ID", "NOMBRE", "APELLIDO", "NOMBRE_COMPLETO", "NOMBRE Y APELLIDO", "NOMBRE_APELLIDO"]
+id_cols = [col for col in id_cols_prioritarias if col in df_emojis.columns]
 otras_cols = [col for col in df_emojis.columns if col not in id_cols]
 df_emojis = df_emojis[id_cols + otras_cols]
 
 # ==============================
-# Mostrar número de registros
+# MOSTRAR TABLA
 # ==============================
 st.markdown(f"**Número de registros mostrados:** {df_emojis.shape[0]}")
+st.markdown(df_emojis.to_html(escape=False, index=False), unsafe_allow_html=True)
 
-# ==============================
-# Mostrar tabla interactiva
-# ==============================
-st.dataframe(df_emojis, use_container_width=True)
+st.success("✅ Datos cargados correctamente.")
